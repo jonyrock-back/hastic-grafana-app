@@ -238,26 +238,21 @@ export class AnalyticController {
     this.analyticUnits.forEach(analyticUnit => this._detectionRunners.delete(analyticUnit.id));
   }
 
-  async fetchAnalyticUnitsDetectionSpans(from: number, to: number): Promise<void[]> {
+  async fetchAnalyticUnitsDetectionSpans(from: number, to: number): Promise<void> {
     if(!_.isNumber(+from)) {
       throw new Error('from isn`t number');
     }
     if(!_.isNumber(+to)) {
       throw new Error('to isn`t number');
     }
-    const tasks = this.analyticUnits
-      .map(analyticUnit => this.fetchDetectionSpans(analyticUnit, from, to));
-    return Promise.all(tasks);
-  }
 
-  async fetchDetectionSpans(analyticUnit: AnalyticUnit, from: number, to: number): Promise<void> {
-    if(!_.isNumber(+from)) {
-      throw new Error('from isn`t number');
-    }
-    if(!_.isNumber(+to)) {
-      throw new Error('to isn`t number');
-    }
-    analyticUnit.detectionSpans = await this._analyticService.getDetectionSpans(analyticUnit.id, from, to);
+    const result = await this._analyticService.getDetectionSpans(
+      this.analyticUnits.map(analyticUnit => analyticUnit.id), from, to
+    );
+
+    result.forEach((spans, analyticUnitId) => {
+      this._analyticUnitsSet.byId(analyticUnitId).detectionSpans = spans;
+    });
   }
 
   async fetchAnalyticUnitsSegments(from: number, to: number): Promise<void[]> {
@@ -610,32 +605,30 @@ export class AnalyticController {
   }
 
   // TODO: range type with "from" and "to" fields
-  private async _runDetectionsWaiter(analyticUnits: AnalyticUnit[], from: number, to: number) {
-    const detectionsGenerator = this._analyticService.getDetectionsGenerator(analyticUnits.map(u => u.id), from, to, 1000);
+  private async _runDetectionsWaiter(analyticUnit: AnalyticUnit, from: number, to: number) {
+    const detectionsGenerator = this._analyticService.getDetectionsGenerator(_.map(this._detectionRunners, u => u.id), from, to, 1000);
 
     return this._runWaiter<DetectionSpan[]>(
-      analyticUnits,
+      analyticUnit,
       this._detectionRunners,
       detectionsGenerator,
       (data) => {
-        analyticUnits.forEach(analyticUnit => {
-          if(!_.isEqual(data, analyticUnit.detectionSpans)) {
-            this._emitter.emit('analytic-unit-status-change', analyticUnit);
+        if(!_.isEqual(data, analyticUnit.detectionSpans)) {
+          this._emitter.emit('analytic-unit-status-change', analyticUnit);
+        }
+        analyticUnit.detectionSpans = data;
+        let isFinished = true;
+        for(let detection of data) {
+          if(detection.status === DetectionStatus.RUNNING) {
+            isFinished = false;
           }
-          analyticUnit.detectionSpans = data;
-          let isFinished = true;
-          for(let detection of data) {
-            if(detection.status === DetectionStatus.RUNNING) {
-              isFinished = false;
-            }
-          }
-          return isFinished;
-        });
+        }
+        return isFinished;
     );
   }
 
   private async _runWaiter<T>(
-    analyticUnits: AnalyticUnit[],
+    analyticUnit: AnalyticUnit,
     runners: Set<AnalyticUnitId>,
     generator: AsyncIterableIterator<T>,
     iteration: (data: T) => boolean

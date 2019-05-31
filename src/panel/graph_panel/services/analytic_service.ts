@@ -18,6 +18,9 @@ export type TableTimeSeries = {
   columns: string[];
 };
 
+export type StatusesMap = Map<AnalyticUnitId, { status: string, errorMessage?: string }>;
+export type DetectionSpansMap = Map<AnalyticUnitId, DetectionSpan[]>;
+
 export class AnalyticService {
   private _isUp: boolean = false;
 
@@ -122,16 +125,21 @@ export class AnalyticService {
     return data.addedIds as SegmentId[];
   }
 
-  async getDetectionSpans(id: AnalyticUnitId, from: number, to: number): Promise<DetectionSpan[]> {
-    if(id === undefined) {
-      throw new Error('id is undefined');
+  async getDetectionSpans(ids: AnalyticUnitId[], from: number, to: number): Promise<DetectionSpansMap> {
+    const payload = { ids, from, to };
+    const resp = await this.get('/detections/spans', payload);
+    if(resp === undefined || resp.spans === undefined) {
+      throw new Error('Server didn`t return spans');
     }
-    let payload: any = { id, from, to };
-    const data = await this.get('/detections/spans', payload);
-    if(data === undefined || data.spans === undefined) {
-      throw new Error('Server didn`t return spans array');
+    return resp.spans;
+  }
+
+  async getStatuses(ids: AnalyticUnitId[]): Promise<StatusesMap> {
+    const resp = await this.get('/analyticUnits/status', { ids });
+    if(resp === undefined || resp.statuses === undefined) {
+      throw new Error('Server didn`t return statuses');
     }
-    return data.spans;
+    return resp.statuses;
   }
 
   async getSegments(id: AnalyticUnitId, from?: number, to?: number): Promise<AnalyticSegment[]> {
@@ -154,22 +162,13 @@ export class AnalyticService {
   }
 
   getStatusGenerator(
-    id: AnalyticUnitId,
+    ids: AnalyticUnitId[],
     duration: number
-  ): AsyncIterableIterator<{ status: string, errorMessage?: string }> {
-    return getGenerator<{ status: string, errorMessage?: string }>(
-      id,
+  ): AsyncIterableIterator<StatusesMap> {
+    return getGenerator<StatusesMap>(
+      ids,
       duration,
-      async (id) => {
-        try {
-          return this.get('/analyticUnits/status', { id });
-        } catch(error) {
-          if(error.status === 404) {
-            return { status: '404' };
-          }
-          throw error;
-        }
-      }
+      this.getStatuses.bind(this)
     );
   }
 
@@ -178,8 +177,8 @@ export class AnalyticService {
     from: number,
     to: number,
     duration: number
-  ): AsyncIterableIterator<DetectionSpan[]> {
-    return getGenerator<DetectionSpan[]>(
+  ): AsyncIterableIterator<DetectionSpansMap> {
+    return getGenerator<DetectionSpansMap>(
       ids,
       duration,
       this.getDetectionSpans.bind(this),
@@ -336,7 +335,7 @@ async function *getGenerator<T>(
   ...args
 ): AsyncIterableIterator<T> {
   if(ids === undefined) {
-    throw new Error('id is undefined');
+    throw new Error('ids are undefined');
   }
 
   let timeout = async () => new Promise(
