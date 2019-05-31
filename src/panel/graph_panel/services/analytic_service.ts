@@ -174,13 +174,13 @@ export class AnalyticService {
   }
 
   getDetectionsGenerator(
-    id: AnalyticUnitId,
+    ids: AnalyticUnitId[],
     from: number,
     to: number,
     duration: number
   ): AsyncIterableIterator<DetectionSpan[]> {
     return getGenerator<DetectionSpan[]>(
-      id,
+      ids,
       duration,
       this.getDetectionSpans.bind(this),
       from,
@@ -330,12 +330,12 @@ export class AnalyticService {
 }
 
 async function *getGenerator<T>(
-  id: AnalyticUnitId,
+  ids: AnalyticUnitId[],
   duration: number,
   func: (...args: any[]) => Promise<T>,
   ...args
 ): AsyncIterableIterator<T> {
-  if(id === undefined) {
+  if(ids === undefined) {
     throw new Error('id is undefined');
   }
 
@@ -344,7 +344,7 @@ async function *getGenerator<T>(
   );
 
   while(true) {
-    yield await func(id, ...args);
+    yield await func(ids, ...args);
     await timeout();
   }
 }

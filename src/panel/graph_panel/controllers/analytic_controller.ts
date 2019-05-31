@@ -231,11 +231,7 @@ export class AnalyticController {
     if(from === undefined || to === undefined) {
       return;
     }
-    this.analyticUnits.forEach(analyticUnit => {
-      if(analyticUnit.status === 'READY') {
-        this._runDetectionsWaiter(analyticUnit, from, to);
-      }
-    });
+    this._runDetectionsWaiter(this.analyticUnits.filter(unit => unit.status === 'READY'), from, to);
   }
 
   stopAnalyticUnitsDetectionsFetching() {
@@ -614,31 +610,32 @@ export class AnalyticController {
   }
 
   // TODO: range type with "from" and "to" fields
-  private async _runDetectionsWaiter(analyticUnit: AnalyticUnit, from: number, to: number) {
-    const detectionsGenerator = this._analyticService.getDetectionsGenerator(analyticUnit.id, from, to, 1000);
+  private async _runDetectionsWaiter(analyticUnits: AnalyticUnit[], from: number, to: number) {
+    const detectionsGenerator = this._analyticService.getDetectionsGenerator(analyticUnits.map(u => u.id), from, to, 1000);
 
     return this._runWaiter<DetectionSpan[]>(
-      analyticUnit,
+      analyticUnits,
       this._detectionRunners,
       detectionsGenerator,
       (data) => {
-        if(!_.isEqual(data, analyticUnit.detectionSpans)) {
-          this._emitter.emit('analytic-unit-status-change', analyticUnit);
-        }
-        analyticUnit.detectionSpans = data;
-        let isFinished = true;
-        for(let detection of data) {
-          if(detection.status === DetectionStatus.RUNNING) {
-            isFinished = false;
+        analyticUnits.forEach(analyticUnit => {
+          if(!_.isEqual(data, analyticUnit.detectionSpans)) {
+            this._emitter.emit('analytic-unit-status-change', analyticUnit);
           }
-        }
-        return isFinished;
-      }
+          analyticUnit.detectionSpans = data;
+          let isFinished = true;
+          for(let detection of data) {
+            if(detection.status === DetectionStatus.RUNNING) {
+              isFinished = false;
+            }
+          }
+          return isFinished;
+        });
     );
   }
 
   private async _runWaiter<T>(
-    analyticUnit: AnalyticUnit,
+    analyticUnits: AnalyticUnit[],
     runners: Set<AnalyticUnitId>,
     generator: AsyncIterableIterator<T>,
     iteration: (data: T) => boolean
