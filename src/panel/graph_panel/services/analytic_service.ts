@@ -162,7 +162,7 @@ export class AnalyticService {
   }
 
   getStatusGenerator(
-    ids: AnalyticUnitId[],
+    ids: Set<AnalyticUnitId>,
     duration: number
   ): AsyncIterableIterator<StatusesMap> {
     return getGenerator<StatusesMap>(
@@ -173,7 +173,7 @@ export class AnalyticService {
   }
 
   getDetectionsGenerator(
-    ids: AnalyticUnitId[],
+    ids: Set<AnalyticUnitId>,
     from: number,
     to: number,
     duration: number
@@ -329,7 +329,7 @@ export class AnalyticService {
 }
 
 async function *getGenerator<T>(
-  ids: AnalyticUnitId[],
+  ids: Set<AnalyticUnitId>,
   duration: number,
   func: (...args: any[]) => Promise<T>,
   ...args

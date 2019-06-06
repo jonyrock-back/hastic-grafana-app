@@ -1,6 +1,6 @@
 // Corresponds to https://github.com/hastic/hastic-server/blob/master/server/src/models/analytic_units/analytic_unit.ts
 
-import { AnalyticService, TableTimeSeries } from '../services/analytic_service';
+import { AnalyticService, TableTimeSeries, DetectionSpansMap } from '../services/analytic_service';
 
 import {
   AnalyticUnitId, AnalyticUnit,
@@ -228,17 +228,29 @@ export class AnalyticController {
   }
 
   fetchAnalyticUnitsStatuses() {
-    this.analyticUnits.forEach(a => this._runStatusWaiter(a));
+    // this.analyticUnits.forEach(a => this._runStatusWaiter(a));
   }
 
   fetchAnalyticUnitsDetections(from?: number, to?: number) {
     if(from === undefined || to === undefined) {
       return;
     }
-    this._runDetectionsWaiter(this.analyticUnits.filter(unit => unit.status === 'READY'), from, to);
+
+    this._stopAnalyticUnitsDetectionsFetching();
+    this._detectionRunners = new Set(
+      _.map(this.analyticUnits, analyticUnit => {
+        if(analyticUnit.status === 'READY') {
+          return analyticUnit.id;
+        } else {
+          return null;
+        }
+      })
+        .filter(analyticUnit => analyticUnit !== null)
+    );
+    this._runDetectionsWaiter(from, to);
   }
 
-  stopAnalyticUnitsDetectionsFetching() {
+  private _stopAnalyticUnitsDetectionsFetching() {
     this.analyticUnits.forEach(analyticUnit => this._detectionRunners.delete(analyticUnit.id));
   }
 
@@ -325,7 +337,7 @@ export class AnalyticController {
     analyticUnit.detectionSpans = [];
     analyticUnit.status = null;
     await this._analyticService.runDetect(analyticUnitId, from, to);
-    this._runStatusWaiter(analyticUnit);
+    // this._runStatusWaiter(analyticUnit);
   }
 
   // TODO: move to renderer
@@ -596,93 +608,92 @@ export class AnalyticController {
     return _.values(Condition);
   }
 
-  private async _runStatusWaiter(analyticUnit: AnalyticUnit) {
-    const statusGenerator = this._analyticService.getStatusGenerator(
-      analyticUnit.id, 1000
-    );
+  // private async _runStatusWaiter(analyticUnit: AnalyticUnit) {
+  //   const statusGenerator = this._analyticService.getStatusGenerator(1000);
 
-    return this._runWaiter<{ status: string, errorMessage?: string }>(
-      analyticUnit,
-      this._statusRunners,
-      statusGenerator,
-      (data) => {
-        const status = data.status;
-        const error = data.errorMessage;
-        if(analyticUnit.status !== status) {
-          analyticUnit.status = status;
-          if(error !== undefined) {
-            analyticUnit.error = error;
-          }
-          this._emitter.emit('analytic-unit-status-change', analyticUnit);
-        }
-        if(!analyticUnit.isActiveStatus) {
-          return true;
-        }
-        return false;
-      }
-    );
-  }
+  //   return this._runWaiter<{ status: string, errorMessage?: string }>(
+  //     analyticUnit,
+  //     this._statusRunners,
+  //     statusGenerator,
+  //     (data) => {
+  //       const status = data.status;
+  //       const error = data.errorMessage;
+  //       if(analyticUnit.status !== status) {
+  //         analyticUnit.status = status;
+  //         if(error !== undefined) {
+  //           analyticUnit.error = error;
+  //         }
+  //         this._emitter.emit('analytic-unit-status-change', analyticUnit);
+  //       }
+  //       if(!analyticUnit.isActiveStatus) {
+  //         return true;
+  //       }
+  //       return false;
+  //     }
+  //   );
+  // }
 
   // TODO: range type with "from" and "to" fields
-  private async _runDetectionsWaiter(analyticUnit: AnalyticUnit, from: number, to: number) {
-    const detectionsGenerator = this._analyticService.getDetectionsGenerator(_.map(this._detectionRunners, u => u.id), from, to, 1000);
+  private async _runDetectionsWaiter(from: number, to: number) {
+    const detectionsGenerator = this._analyticService.getDetectionsGenerator(this._detectionRunners, from, to, 1000);
 
-    return this._runWaiter<DetectionSpan[]>(
-      analyticUnit,
+    return this._runWaiter<DetectionSpansMap>(
       this._detectionRunners,
       detectionsGenerator,
-      (data) => {
-        if(!_.isEqual(data, analyticUnit.detectionSpans)) {
-          this._emitter.emit('analytic-unit-status-change', analyticUnit);
-        }
-        analyticUnit.detectionSpans = data;
-        let isFinished = true;
-        for(let detection of data) {
-          if(detection.status === DetectionStatus.RUNNING) {
-            isFinished = false;
-          }
-        }
-        return isFinished;
+      spansMap => 
+      
+          Array.from(spansMap).map(span => {
+            const analyticUnitId = span[0];
+            const detectionSpans = span[1];
+
+            const analyticUnit = this._analyticUnitsSet.byId(analyticUnitId);
+            if(!_.isEqual(detectionSpans, analyticUnit.detectionSpans)) {
+              this._emitter.emit('analytic-unit-status-change', analyticUnit);
+            }
+            analyticUnit.detectionSpans = detectionSpans;
+            let isFinished = true;
+            for(let detection of detectionSpans) {
+              if(detection.status === DetectionStatus.RUNNING) {
+                isFinished = false;
+              }
+            }
+            return [analyticUnitId, isFinished];
+          })
     );
   }
 
-  private async _runWaiter<T>(
-    analyticUnit: AnalyticUnit,
-    runners: Set<AnalyticUnitId>,
-    generator: AsyncIterableIterator<T>,
-    iteration: (data: T) => boolean
-  ) {
+  private _addAnalyticUnitToWaiter(analyticUnitId: AnalyticUnitId, runners: Set<AnalyticUnitId>) {
     if(this._analyticService === undefined) {
       return;
     }
-    if(analyticUnit === undefined || analyticUnit === null) {
-      throw new Error('analyticUnit not defined');
+
+    if(analyticUnitId === undefined) {
+      throw new Error('analyticUnitId is undefined');
     }
 
-    if(analyticUnit.id === undefined) {
-      throw new Error('analyticUnit.id is undefined');
-    }
-
-    if(runners.has(analyticUnit.id)) {
+    if(runners.has(analyticUnitId)) {
       return;
     }
 
-    runners.add(analyticUnit.id);
+    runners.add(analyticUnitId);
+  }
 
+  private async _runWaiter<T>(
+    runners: Set<AnalyticUnitId>,
+    generator: AsyncIterableIterator<T>,
+    iteration: (data: T) => [AnalyticUnitId, boolean][]
+  ) {
     for await (const data of generator) {
       if(data === undefined) {
         break;
       }
-      if(!runners.has(analyticUnit.id)) {
-        break;
-      }
-      const shouldBreak = iteration(data);
-      if(shouldBreak) {
-        break;
-      }
+      const shouldBreakMap: [AnalyticUnitId, boolean][] = iteration(data);
+      _.forEach(shouldBreakMap, (shouldBreak, analyticUnitId) => {
+        if(shouldBreak[1]) {
+          runners.delete(shouldBreak[0]);
+        }
+      });
     }
-
-    runners.delete(analyticUnit.id);
   }
 
   public getNewTempSegmentId(): SegmentId {
