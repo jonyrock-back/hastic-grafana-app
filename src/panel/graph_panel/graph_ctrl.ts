@@ -292,13 +292,12 @@ class GraphCtrl extends MetricsPanelCtrl {
 
     this.rebindKeys(); // a small hask: bind if we open page in edit mode
 
-    const partialPath = this.panelPath + '/partials';
-    this.addEditorTab('Analytics', `${partialPath}/tab_analytics.html`, 2);
-    this.addEditorTab('Webhooks', `${partialPath}/tab_webhooks.html`, 3);
+    this.addEditorTab('Analytics', `${this.partialsPath}/tab_analytics.html`, 2);
+    this.addEditorTab('Webhooks', `${this.partialsPath}/tab_webhooks.html`, 3);
     this.addEditorTab('Axes', axesEditorComponent, 4);
-    this.addEditorTab('Legend', `${partialPath}/tab_legend.html`, 5);
-    this.addEditorTab('Display', `${partialPath}/tab_display.html`, 6);
-    this.addEditorTab('Hastic info', `${partialPath}/tab_info.html`, 7);
+    this.addEditorTab('Legend', `${this.partialsPath}/tab_legend.html`, 5);
+    this.addEditorTab('Display', `${this.partialsPath}/tab_display.html`, 6);
+    this.addEditorTab('Hastic info', `${this.partialsPath}/tab_info.html`, 7);
 
     this.subTabIndex = 0;
   }
@@ -363,20 +362,14 @@ class GraphCtrl extends MetricsPanelCtrl {
 
     this.dataList = dataList;
     this.loading = true;
-
-    const { from, to } = this.rangeTimestamp;
-
-    if(this.analyticsController !== undefined) {
-      const hsrSeries = await this.analyticsController.getHSRSeries(from, to);
-      this.dataList = _.concat(this.dataList, hsrSeries);
-    }
-    this.seriesList = this.processor.getSeriesList({
+    
+    let seriesList = this.processor.getSeriesList({
       dataList: this.dataList,
       range: this.range,
     });
 
     this.dataWarning = null;
-    const hasSomePoint = this.seriesList.some(s => s.datapoints.length > 0);
+    const hasSomePoint = seriesList.some(s => s.datapoints.length > 0);
 
     if(!hasSomePoint) {
       this.dataWarning = {
@@ -384,7 +377,7 @@ class GraphCtrl extends MetricsPanelCtrl {
         tip: 'No datapoints returned from data query',
       };
     } else {
-      for(let series of this.seriesList) {
+      for(let series of seriesList) {
         if(series.isOutsideRange) {
           this.dataWarning = {
             title: 'Data points outside time range',
@@ -392,17 +385,31 @@ class GraphCtrl extends MetricsPanelCtrl {
           };
           break;
         }
-        const from = _.find(series.datapoints, datapoint => datapoint[0] !== null);
-        const to = _.findLast(series.datapoints, datapoint => datapoint[0] !== null);
+      }
+      // TODO: multiple metrics will be supported
+      const from = _.find(seriesList[0].datapoints, datapoint => datapoint[0] !== null);
+      const to = _.findLast(seriesList[0].datapoints, datapoint => datapoint[0] !== null);
 
-        this._dataTimerange = {};
-        if(from !== undefined && to !== undefined) {
-          this._dataTimerange = { from: from[1], to: to[1] };
-        }
+      this._dataTimerange = {};
+      if (from !== undefined && to !== undefined) {
+        this._dataTimerange = { from: from[1], to: to[1] };
       }
     }
 
     if(this.analyticsController !== undefined) {
+      let { from, to } = this.rangeTimestamp;
+      if(!_.isEmpty(this._dataTimerange)) {
+        from = this._dataTimerange.from;
+        to = this._dataTimerange.to;
+      }
+      const hsrData = await this.analyticsController.getHSRSeries(from, to);
+
+      const hsrSeries = this.processor.getSeriesList({
+        dataList: hsrData,
+        range: this.range,
+      });
+      seriesList = _.concat(seriesList, hsrSeries);
+
       await this.analyticsController.fetchAnalyticUnitsSegments(from, to);
       // TODO: make statuses and detection spans connected
       this.analyticsController.fetchAnalyticUnitsStatuses();
@@ -412,8 +419,9 @@ class GraphCtrl extends MetricsPanelCtrl {
         this._dataTimerange.from,
         this._dataTimerange.to
       );
-      this.render(this.seriesList);
     }
+    this.seriesList = seriesList;
+    this.render();
 
     this.loading = false;
   }
@@ -424,12 +432,12 @@ class GraphCtrl extends MetricsPanelCtrl {
     }
 
     for(let series of this.seriesList) {
-      if (series.unit) {
+      if(series.unit) {
         this.panel.yaxes[series.yaxis - 1].format = series.unit;
       }
     }
 
-    if(!this.analyticsController.graphLocked) {
+    if(this.analyticsController === undefined || !this.analyticsController.graphLocked) {
       this._graphRenderer.render(this.seriesList);
       this._graphLegend.render();
       this._graphRenderer.renderPanel();
@@ -555,7 +563,32 @@ class GraphCtrl extends MetricsPanelCtrl {
   }
 
   get panelPath() {
-    return this.pluginPath + '/panel/graph_panel';
+    return `${this.pluginPath}/panel/graph_panel`;
+  }
+
+  get partialsPath() {
+    return `${this.panelPath}/partials`;
+  }
+
+  get grafanaVersion() {
+    if(_.has(window, 'grafanaBootData.settings.buildInfo.version')) {
+      return window.grafanaBootData.settings.buildInfo.version;
+    }
+    return null;
+  }
+
+  getTemplatePath(filename: string) {
+    const grafanaVersion = this.grafanaVersion;
+    if(grafanaVersion === null) {
+      throw new Error('Unknown Grafana version');
+    }
+    if(grafanaVersion[0] === '5') {
+      return `${this.partialsPath}/${filename}_5.x.html`;
+    }
+    if(grafanaVersion[0] === '6') {
+      return `${this.partialsPath}/${filename}_6.x.html`;
+    }
+    throw new Error(`Unsupported Grafana version: ${grafanaVersion}`);
   }
 
   createNew() {
@@ -571,11 +604,14 @@ class GraphCtrl extends MetricsPanelCtrl {
     this.analyticsController.redetectAll(from, to);
   }
 
-  async runDetectInCurrentRange(analyticUnitId: AnalyticUnitId) {
+  async runDetectInCurrentRange(analyticUnit: AnalyticUnit) {
     const { from, to } = this.rangeTimestamp;
 
+    if(analyticUnit.changed) {
+      await this.onAnalyticUnitSave(analyticUnit);
+    }
     this.analyticsController.runDetect(
-      analyticUnitId,
+      analyticUnit.id,
       from, to
     );
   }
@@ -597,8 +633,7 @@ class GraphCtrl extends MetricsPanelCtrl {
         ]
       );
     }
-    this.$scope.$digest();
-    this.render(this.seriesList);
+    this.refresh();
   }
 
   async onAnalyticUnitAlertChange(analyticUnit: AnalyticUnit) {
@@ -610,6 +645,12 @@ class GraphCtrl extends MetricsPanelCtrl {
   }
 
   async onAnalyticUnitSave(analyticUnit: AnalyticUnit) {
+    if(
+      this.analyticsController.labelingUnit !== null && 
+      this.analyticsController.labelingUnit.id === analyticUnit.id
+    ) {
+      await this.onToggleLabelingMode(analyticUnit.id)
+    }
     await this.analyticsController.saveAnalyticUnit(analyticUnit);
     this.refresh();
   }
@@ -682,6 +723,11 @@ class GraphCtrl extends MetricsPanelCtrl {
     this.refresh();
   }
 
+  onToggleCollapsed(id: AnalyticUnitId) {
+    this.analyticsController.toggleCollapsed(id);
+    this.refresh();
+  }
+
   onSeasonalityChange(id: AnalyticUnitId, value?: number) {
     this.analyticsController.updateSeasonality(id, value);
     this.refresh();
@@ -695,9 +741,9 @@ class GraphCtrl extends MetricsPanelCtrl {
 
     const hasticDatasource = this.hasticDatasource;
 
-    let grafanaVersion = 'unknown';
-    if(_.has(window, 'grafanaBootData.settings.buildInfo.version')) {
-      grafanaVersion = window.grafanaBootData.settings.buildInfo.version;
+    let grafanaVersion = this.grafanaVersion;
+    if(grafanaVersion === null) {
+      grafanaVersion = 'unknown';
     }
     this._panelInfo = {
       grafanaVersion,

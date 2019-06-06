@@ -14,7 +14,7 @@
 
 A version of Grafana's default Graph Panel for rendering and labeling Hastic's patterns.
 
-<img src="https://hastic.io/images/cpu_white.gif" />
+<img src="https://hastic.io/images/patterns.gif" />
 
 See also:
 * [Getting started](https://github.com/hastic/hastic-grafana-app/wiki/Getting-started)
@@ -27,7 +27,7 @@ See also:
 # Prerequisites
 
 * [hastic-server](https://github.com/hastic/hastic-server)
-* [Grafana >= 5.4.0](https://grafana.com/grafana/download), we don't support Grafana 6.x.x yet
+* [Grafana >= 5.4.0](https://grafana.com/grafana/download)
 
 ## Support and Consulting
 

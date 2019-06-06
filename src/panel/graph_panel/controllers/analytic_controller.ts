@@ -80,12 +80,15 @@ export class AnalyticController {
   }
 
   private _segmentsSearcher(point: number, rangeDist: number): AnalyticSegmentPair[] {
-    var result: AnalyticSegmentPair[] = [];
-    this._analyticUnitsSet.items.forEach(at => {
-      var segs = at.segments.findSegments(point, rangeDist);
+    let result: AnalyticSegmentPair[] = [];
+    this._analyticUnitsSet.items.forEach(analyticUnit => {
+      if(!analyticUnit.visible) {
+        return;
+      }
+      const segs = analyticUnit.segments.findSegments(point, rangeDist);
       segs.forEach(s => {
-        result.push({ analyticUnit: at, segment: s });
-      })
+        result.push({ analyticUnit, segment: s });
+      });
     })
     return result;
   }
@@ -163,9 +166,7 @@ export class AnalyticController {
 
     this.labelingUnit.saving = false;
 
-    let unit = this.labelingUnit;
     this.dropLabeling();
-    this._runStatusWaiter(unit);
   }
 
   undoLabeling() {
@@ -182,6 +183,8 @@ export class AnalyticController {
     this._labelingDataAddedSegments.clear();
     this._labelingDataRemovedSegments.clear();
     this.labelingUnit.selected = false;
+    // TODO: it could be changed before labeling
+    this.labelingUnit.changed = false;
     this._selectedAnalyticUnitId = null;
     this._tempIdCounted = -1;
   }
@@ -203,6 +206,7 @@ export class AnalyticController {
 
   addSegment(segment: Segment, deleted = false) {
     const addedSegment = this.labelingUnit.addSegment(segment, deleted);
+    this.labelingUnit.changed = true;
     this._labelingDataAddedSegments.addSegment(addedSegment);
   }
 
@@ -299,9 +303,6 @@ export class AnalyticController {
     const newIds = await this._analyticService.updateSegments(
       unit.id, this._labelingDataAddedSegments, this._labelingDataRemovedSegments
     );
-    if(unit.labelingMode !== LabelingMode.UNLABELING) {
-      await this._analyticService.runDetect(unit.id);
-    }
     return newIds;
   }
 
@@ -442,7 +443,14 @@ export class AnalyticController {
         this._labelingDataRemovedSegments.addSegment(s);
       }
     });
-    this._labelingDataAddedSegments.removeInRange(from, to);
+    const removed = this._labelingDataAddedSegments.removeInRange(from, to);
+    if(!_.isEmpty(removed)) {
+      this.labelingUnit.changed = true;
+    }
+    if(this._labelingDataAddedSegments.length === 0 &&
+      this._labelingDataRemovedSegments.length === 0) {
+      this.labelingUnit.changed = false;
+    }
   }
 
   toggleLabelingMode(labelingMode: LabelingMode): void {
@@ -549,19 +557,30 @@ export class AnalyticController {
         {
           target: '[AnomalyDetector]: lower bound',
           datapoints: response.lowerBound.datapoints,
-          color: ANALYTIC_UNIT_COLORS[0],
-          overrides: [{ alias: '[AnomalyDetector]: lower bound', linewidth: 1, fill: 0 }]
+          color: ANALYTIC_UNIT_COLORS[1],
+          overrides: [{
+            alias: '[AnomalyDetector]: lower bound',
+            linewidth: 1,
+            fill: 0,
+            legend: false
+          }]
         },
         {
           target: '[AnomalyDetector]: upper bound',
           datapoints: response.upperBound.datapoints,
-          color: ANALYTIC_UNIT_COLORS[0],
-          overrides: [{ alias: '[AnomalyDetector]: upper bound', linewidth: 1, fill: 0 }]
+          color: ANALYTIC_UNIT_COLORS[1],
+          overrides: [{
+            alias: '[AnomalyDetector]: upper bound',
+            linewidth: 1,
+            fill: 0,
+            fillBelowTo: '[AnomalyDetector]: lower bound',
+            legend: false
+          }]
         },
         hsrSerie
       ];
     }
-    return hsrSerie;
+    return [hsrSerie];
   }
 
   get inspectedAnalyticUnit(): AnalyticUnit | null {
@@ -685,6 +704,15 @@ export class AnalyticController {
     this.analyticUnits
       .filter(analyticUnit => analyticUnit.id !== id)
       .forEach(unit => unit.inspect = false);
+
+    const analyticUnit = this._analyticUnitsSet.byId(id);
+    analyticUnit.inspect = !analyticUnit.inspect;
+  }
+
+  public toggleCollapsed(id: AnalyticUnitId) {
+    const analyticUnit = this._analyticUnitsSet.byId(id);
+    analyticUnit.collapsed = !analyticUnit.collapsed;
+    analyticUnit.changed = true;
   }
 
   public async updateSeasonality(id: AnalyticUnitId, value?: number) {
