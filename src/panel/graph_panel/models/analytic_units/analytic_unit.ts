@@ -86,7 +86,8 @@ export class AnalyticUnit {
       deletedColor: this.deletedColor,
       alert: this.alert,
       visible: this.visible,
-      collapsed: this.collapsed
+      collapsed: this.collapsed,
+      metricName: this.metricName
     };
   }
 
@@ -95,6 +96,9 @@ export class AnalyticUnit {
 
   set name(value: string) { this._serverObject.name = value; }
   get name(): string { return this._serverObject.name; }
+
+  set metricName(value: string) { this._serverObject.metricName = value; }
+  get metricName(): string { return this._serverObject.metricName; }
 
   set detectorType(value: DetectorType) { this._serverObject.detectorType = value; }
   get detectorType(): DetectorType { return this._serverObject.detectorType; }

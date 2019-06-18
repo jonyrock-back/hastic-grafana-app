@@ -33,6 +33,7 @@ class GraphCtrl extends MetricsPanelCtrl {
 
   private _datasourceRequest: DatasourceRequest;
   private _datasources: any;
+  private _metrics: string[];
 
   private _renderError: boolean = false;
 
@@ -396,6 +397,8 @@ class GraphCtrl extends MetricsPanelCtrl {
       }
     }
 
+    this._metrics = this.dataList.map(data => data.target);
+
     if(this.analyticsController !== undefined) {
       let { from, to } = this.rangeTimestamp;
       if(!_.isEmpty(this._dataTimerange)) {
@@ -621,7 +624,7 @@ class GraphCtrl extends MetricsPanelCtrl {
       const datasource = await this._getDatasourceRequest();
 
       await this.analyticsController.saveNew(
-        new MetricExpanded(this.panel.datasource, this.panel.targets),
+        new MetricExpanded(this.panel.datasource, this.panel.targets, 'test'),
         datasource
       );
     } catch(e) {
@@ -691,7 +694,7 @@ class GraphCtrl extends MetricsPanelCtrl {
   async onToggleLabelingMode(id: AnalyticUnitId) {
     this.refresh();
     const datasource = await this._getDatasourceRequest();
-    const metric = new MetricExpanded(this.panel.datasource, this.panel.targets);
+    const metric = new MetricExpanded(this.panel.datasource, this.panel.targets, 'test');
     await this.analyticsController.toggleAnalyticUnitLabelingMode(id, metric, datasource);
     this.$scope.$digest();
     this.render();
@@ -761,6 +764,10 @@ class GraphCtrl extends MetricsPanelCtrl {
       if(datasource.access !== 'proxy') {
         throw new Error(`"${datasource.name}" datasource has "Browser" access type but only "Server" is supported`);
       }
+
+      if(this.panel.targets.length > 1) {
+        throw new Error('There are more than 1 metric queries. Only one metric query is supported')
+      }
       this._datasourceRequest.type = datasource.type;
     }
     return this._datasourceRequest;
@@ -809,6 +816,10 @@ class GraphCtrl extends MetricsPanelCtrl {
 
   get renderError(): boolean { return this._renderError; }
   set renderError(value: boolean) { this._renderError = value; }
+
+  get metrics(): string[] {
+    return this._metrics;
+  }
 }
 
 export { GraphCtrl, GraphCtrl as PanelCtrl };

@@ -26,7 +26,7 @@ export class Target {
 
 export class MetricExpanded {
   private _targets: Target[];
-  constructor(public datasource: string, targets: any[]) {
+  constructor(public datasource: string, targets: any[], public name) {
     const visibleTargets = targets.filter(target => !target.hide);
     if(visibleTargets.length > 1) {
       throw new Error('Multiple metrics are not supported currently');
@@ -37,7 +37,8 @@ export class MetricExpanded {
   toJSON(): any {
     return {
       datasource: this.datasource,
-      targets: this._targets.map(t => t.getJSON())
+      targets: this._targets.map(t => t.getJSON()),
+      name: this.name
     }
   }
 }
