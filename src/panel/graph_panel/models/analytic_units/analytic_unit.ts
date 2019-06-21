@@ -160,6 +160,7 @@ export class AnalyticUnit {
     // TODO: use enum
     if(
       value !== '404' &&
+      value !== 'CREATED' &&
       value !== 'READY' &&
       value !== 'LEARNING' &&
       value !== 'DETECTION' &&
