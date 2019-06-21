@@ -88,6 +88,7 @@ export const SEGMENT_STROKE_ALPHA = 0.8;
 export const LABELING_MODE_ALPHA = 0.7;
 
 export const DETECTION_STATUS_COLORS = new Map<DetectionStatus, string>([
+  [DetectionStatus.CREATED, 'gray'],
   [DetectionStatus.READY, 'green'],
   [DetectionStatus.RUNNING, 'gold'],
   [DetectionStatus.FAILED, 'red']

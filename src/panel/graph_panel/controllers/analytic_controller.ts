@@ -236,9 +236,7 @@ export class AnalyticController {
       return;
     }
     this.analyticUnits.forEach(analyticUnit => {
-      if(analyticUnit.status === 'READY') {
-        this._runDetectionsWaiter(analyticUnit, from, to);
-      }
+      this._runDetectionsWaiter(analyticUnit, from, to);
     });
   }
 
