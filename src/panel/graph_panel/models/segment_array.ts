@@ -10,17 +10,17 @@ export class SegmentArray<T extends Segment> implements SegmentsSet<T> {
     this.setSegments(segments);
   }
 
-  getSegments(from?: number, to?: number): T[] {
-    if(from === undefined) {
-      from = -Infinity;
+  getSegments(from_timestamp?: number, to_timestamp?: number): T[] {
+    if(from_timestamp === undefined) {
+      from_timestamp = -Infinity;
     }
-    if(to === undefined) {
-      to = Infinity;
+    if(to_timestamp === undefined) {
+      to_timestamp = Infinity;
     }
     var result = [];
     for(var i = 0; i < this._segments.length; i++) {
       var s = this._segments[i];
-      if(from <= s.from && s.to <= to) {
+      if(from_timestamp <= s.from_timestamp && s.to_timestamp <= to_timestamp) {
         result.push(s);
       }
     }
@@ -48,16 +48,16 @@ export class SegmentArray<T extends Segment> implements SegmentsSet<T> {
   findSegments(point: number, rangeDist: number): T[] {
     return this._segments.filter(s => {
       const expanded = s.expandDist(rangeDist, 0.01);
-      return (expanded.from <= point) && (point <= expanded.to);
+      return (expanded.from_timestamp <= point) && (point <= expanded.to_timestamp);
     });
   }
 
-  removeInRange(from: number, to: number): T[] {
+  removeInRange(from_timestamp: number, to_timestamp: number): T[] {
     var deleted = [];
     var newSegments = [];
     for(var i = 0; i < this._segments.length; i++) {
       var s = this._segments[i];
-      if(from <= s.from && s.to <= to) {
+      if(from_timestamp <= s.from_timestamp && s.to_timestamp <= to_timestamp) {
         this._keyToSegment.delete(s.id);
         deleted.push(s);
       } else {

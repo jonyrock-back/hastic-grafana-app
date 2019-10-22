@@ -117,8 +117,8 @@ export class DataProcessor {
 
     if (datapoints && datapoints.length > 0) {
       var last = datapoints[datapoints.length - 1][1];
-      var from = options.range.from;
-      if (last - from < -10000) {
+      var from_timestamp = options.range.from_timestamp;
+      if (last - from_timestamp < -10000) {
         series.isOutsideRange = true;
       }
     }

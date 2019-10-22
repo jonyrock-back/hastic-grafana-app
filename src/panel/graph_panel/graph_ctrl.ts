@@ -59,8 +59,8 @@ class GraphCtrl extends MetricsPanelCtrl {
   private _panelId: string;
 
   private _dataTimerange: {
-    from?: number,
-    to?: number
+    from_timestamp?: number,
+    to_timestamp?: number
   };
 
   panelDefaults = {
@@ -384,21 +384,21 @@ class GraphCtrl extends MetricsPanelCtrl {
         }
       }
       // TODO: multiple metrics will be supported
-      const from = _.find(seriesList[0].datapoints, datapoint => datapoint[0] !== null);
-      const to = _.findLast(seriesList[0].datapoints, datapoint => datapoint[0] !== null);
+      const from_timestamp = _.find(seriesList[0].datapoints, datapoint => datapoint[0] !== null);
+      const to_timestamp = _.findLast(seriesList[0].datapoints, datapoint => datapoint[0] !== null);
 
-      if (from !== undefined && to !== undefined) {
-        this._dataTimerange = { from: from[1], to: to[1] };
+      if(from_timestamp !== undefined && to_timestamp !== undefined) {
+        this._dataTimerange = { from_timestamp: from_timestamp[1], to_timestamp: to_timestamp[1] };
       }
     }
 
     if(this.analyticsController !== undefined) {
-      let { from, to } = this.rangeTimestamp;
+      let { from_timestamp, to_timestamp } = this.rangeTimestamp;
       if(!_.isEmpty(this._dataTimerange)) {
-        from = this._dataTimerange.from;
-        to = this._dataTimerange.to;
+        from_timestamp = this._dataTimerange.from_timestamp;
+        to_timestamp = this._dataTimerange.to_timestamp;
       }
-      const hsrData = await this.analyticsController.getHSRSeries(from, to);
+      const hsrData = await this.analyticsController.getHSRSeries(from_timestamp, to_timestamp);
 
       const hsrSeries = this.processor.getSeriesList({
         dataList: hsrData,
@@ -406,14 +406,14 @@ class GraphCtrl extends MetricsPanelCtrl {
       });
       seriesList = _.concat(seriesList, hsrSeries);
 
-      await this.analyticsController.fetchAnalyticUnitsSegments(from, to);
+      await this.analyticsController.fetchAnalyticUnitsSegments(from_timestamp, to_timestamp);
       // TODO: make statuses and detection spans connected
       this.analyticsController.fetchAnalyticUnitsStatuses();
       this.analyticsController.stopAnalyticUnitsDetectionsFetching();
       // TODO: re-run detection waiters if this._dataTimerange is changed
       this.analyticsController.fetchAnalyticUnitsDetections(
-        this._dataTimerange.from,
-        this._dataTimerange.to
+        this._dataTimerange.from_timestamp,
+        this._dataTimerange.to_timestamp
       );
     }
     this.seriesList = seriesList;
@@ -596,19 +596,19 @@ class GraphCtrl extends MetricsPanelCtrl {
   }
 
   redetectAll() {
-    const { from, to } = this.rangeTimestamp;
-    this.analyticsController.redetectAll(from, to);
+    const { from_timestamp, to_timestamp } = this.rangeTimestamp;
+    this.analyticsController.redetectAll(from_timestamp, to_timestamp);
   }
 
   async runDetectInCurrentRange(analyticUnit: AnalyticUnit) {
-    const { from, to } = this.rangeTimestamp;
+    const { from_timestamp, to_timestamp } = this.rangeTimestamp;
 
     if(analyticUnit.changed) {
       await this.onAnalyticUnitSave(analyticUnit);
     }
     this.analyticsController.runDetect(
       analyticUnit.id,
-      from, to
+      from_timestamp, to_timestamp
     );
   }
 
@@ -787,14 +787,14 @@ class GraphCtrl extends MetricsPanelCtrl {
     this.$scope.$digest();
   }
 
-  get rangeTimestamp(): { from: number, to: number } {
+  get rangeTimestamp(): { from_timestamp: number, to_timestamp: number } {
     if(this.range === undefined) {
       this.updateTimeRange();
     }
 
     return {
-      from: +this.range.from,
-      to: +this.range.to
+      from_timestamp: +this.range.from_timestamp,
+      to_timestamp: +this.range.to_timestamp
     };
   }
 

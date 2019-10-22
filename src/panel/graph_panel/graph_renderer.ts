@@ -146,12 +146,12 @@ export class GraphRenderer {
       const id = this._analyticController.getNewTempSegmentId();
       const segment = new Segment(
         id,
-        Math.round(selectionEvent.xaxis.from),
-        Math.round(selectionEvent.xaxis.to)
+        Math.round(selectionEvent.xaxis.from_timestamp),
+        Math.round(selectionEvent.xaxis.to_timestamp)
       );
       if(this._analyticController.labelingMode === LabelingMode.DELETING) {
         this._analyticController.deleteLabelingAnalyticUnitSegmentsInRange(
-          segment.from, segment.to
+          segment.from_timestamp, segment.to_timestamp
         );
         this._analyticController.addSegment(segment, true);
       }
@@ -160,7 +160,7 @@ export class GraphRenderer {
       }
       if(this._analyticController.labelingMode === LabelingMode.UNLABELING) {
         this._analyticController.deleteLabelingAnalyticUnitSegmentsInRange(
-          segment.from, segment.to
+          segment.from_timestamp, segment.to_timestamp
         );
       }
 
@@ -177,8 +177,8 @@ export class GraphRenderer {
     } else {
       this.scope.$apply(() => {
         this.timeSrv.setTime({
-          from: moment.utc(selectionEvent.xaxis.from),
-          to: moment.utc(selectionEvent.xaxis.to),
+          from_timestamp: moment.utc(selectionEvent.xaxis.from_timestamp),
+          to_timestamp: moment.utc(selectionEvent.xaxis.to_timestamp),
         });
       });
     }
@@ -550,8 +550,8 @@ export class GraphRenderer {
 
   private _addTimeAxis() {
     var ticks = this.panelWidth / 100;
-    var min = _.isUndefined(this.ctrl.range.from) ? null : this.ctrl.range.from.valueOf();
-    var max = _.isUndefined(this.ctrl.range.to) ? null : this.ctrl.range.to.valueOf();
+    var min = _.isUndefined(this.ctrl.range.from_timestamp) ? null : this.ctrl.range.from_timestamp.valueOf();
+    var max = _.isUndefined(this.ctrl.range.to_timestamp) ? null : this.ctrl.range.to_timestamp.valueOf();
 
     this.flotOptions.xaxis = {
       timezone: this.dashboard.getTimezone(),

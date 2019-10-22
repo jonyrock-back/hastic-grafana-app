@@ -231,13 +231,13 @@ export class AnalyticController {
     this.analyticUnits.forEach(a => this._runStatusWaiter(a));
   }
 
-  fetchAnalyticUnitsDetections(from?: number, to?: number) {
-    if(from === undefined || to === undefined) {
+  fetchAnalyticUnitsDetections(from_timestamp?: number, to_timestamp?: number) {
+    if(from_timestamp === undefined || to_timestamp === undefined) {
       return;
     }
     this.analyticUnits.forEach(analyticUnit => {
       if(analyticUnit.status === 'READY') {
-        this._runDetectionsWaiter(analyticUnit, from, to);
+        this._runDetectionsWaiter(analyticUnit, from_timestamp, to_timestamp);
       }
     });
   }
@@ -246,47 +246,47 @@ export class AnalyticController {
     this.analyticUnits.forEach(analyticUnit => this._detectionRunners.delete(analyticUnit.id));
   }
 
-  async fetchAnalyticUnitsDetectionSpans(from: number, to: number): Promise<void[]> {
-    if(!_.isNumber(+from)) {
+  async fetchAnalyticUnitsDetectionSpans(from_timestamp: number, to_timestamp: number): Promise<void[]> {
+    if(!_.isNumber(+from_timestamp)) {
       throw new Error('from isn`t number');
     }
-    if(!_.isNumber(+to)) {
+    if(!_.isNumber(+to_timestamp)) {
       throw new Error('to isn`t number');
     }
     const tasks = this.analyticUnits
-      .map(analyticUnit => this.fetchDetectionSpans(analyticUnit, from, to));
+      .map(analyticUnit => this.fetchDetectionSpans(analyticUnit, from_timestamp, to_timestamp));
     return Promise.all(tasks);
   }
 
-  async fetchDetectionSpans(analyticUnit: AnalyticUnit, from: number, to: number): Promise<void> {
-    if(!_.isNumber(+from)) {
+  async fetchDetectionSpans(analyticUnit: AnalyticUnit, from_timestamp: number, to_timestamp: number): Promise<void> {
+    if(!_.isNumber(+from_timestamp)) {
       throw new Error('from isn`t number');
     }
-    if(!_.isNumber(+to)) {
+    if(!_.isNumber(+to_timestamp)) {
       throw new Error('to isn`t number');
     }
-    analyticUnit.detectionSpans = await this._analyticService.getDetectionSpans(analyticUnit.id, from, to);
+    analyticUnit.detectionSpans = await this._analyticService.getDetectionSpans(analyticUnit.id, from_timestamp, to_timestamp);
   }
 
-  async fetchAnalyticUnitsSegments(from: number, to: number): Promise<void[]> {
-    if(!_.isNumber(+from)) {
+  async fetchAnalyticUnitsSegments(from_timestamp: number, to_timestamp: number): Promise<void[]> {
+    if(!_.isNumber(+from_timestamp)) {
       throw new Error('from isn`t number');
     }
-    if(!_.isNumber(+to)) {
+    if(!_.isNumber(+to_timestamp)) {
       throw new Error('to isn`t number');
     }
-    const tasks = this.analyticUnits.map(a => this.fetchSegments(a, from, to));
+    const tasks = this.analyticUnits.map(a => this.fetchSegments(a, from_timestamp, to_timestamp));
     return Promise.all(tasks);
   }
 
-  async fetchSegments(analyticUnit: AnalyticUnit, from: number, to: number): Promise<void> {
-    if(!_.isNumber(+from)) {
+  async fetchSegments(analyticUnit: AnalyticUnit, from_timestamp: number, to_timestamp: number): Promise<void> {
+    if(!_.isNumber(+from_timestamp)) {
       throw new Error('from isn`t number');
     }
-    if(!_.isNumber(+to)) {
+    if(!_.isNumber(+to_timestamp)) {
       throw new Error('to isn`t number');
     }
-    var allSegmentsList = await this._analyticService.getSegments(analyticUnit.id, from, to);
+    var allSegmentsList = await this._analyticService.getSegments(analyticUnit.id, from_timestamp, to_timestamp);
     var allSegmentsSet = new SegmentArray(allSegmentsList);
     if(analyticUnit.selected) {
       this._labelingDataAddedSegments.getSegments().forEach(s => allSegmentsSet.addSegment(s));
@@ -315,7 +315,7 @@ export class AnalyticController {
     return newIds;
   }
 
-  async redetectAll(from?: number, to?: number) {
+  async redetectAll(from_timestamp?: number, to_timestamp?: number) {
     this.analyticUnits.forEach(unit => {
       // TODO: remove duplication with runDetect
       unit.segments.clear();
@@ -323,17 +323,17 @@ export class AnalyticController {
       unit.status = null;
     });
     const ids = this.analyticUnits.map(analyticUnit => analyticUnit.id);
-    await this._analyticService.runDetect(ids, from, to);
+    await this._analyticService.runDetect(ids, from_timestamp, to_timestamp);
 
     this.fetchAnalyticUnitsStatuses();
   }
 
-  async runDetect(analyticUnitId: AnalyticUnitId, from?: number, to?: number) {
+  async runDetect(analyticUnitId: AnalyticUnitId, from_timestamp?: number, to_timestamp?: number) {
     const analyticUnit = this._analyticUnitsSet.byId(analyticUnitId);
     analyticUnit.segments.clear();
     analyticUnit.detectionSpans = [];
     analyticUnit.status = null;
-    await this._analyticService.runDetect(analyticUnitId, from, to);
+    await this._analyticService.runDetect(analyticUnitId, from_timestamp, to_timestamp);
     this._runStatusWaiter(analyticUnit);
   }
 
@@ -386,15 +386,15 @@ export class AnalyticController {
 
         const expanded = s.expandDist(rangeDist, 0.01);
         options.grid.markings.push({
-          xaxis: { from: expanded.from, to: expanded.to },
+          xaxis: { from_timestamp: expanded.from_timestamp, to_timestamp: expanded.to_timestamp },
           color: segmentFillColor
         });
         options.grid.markings.push({
-          xaxis: { from: expanded.from, to: expanded.from },
+          xaxis: { from_timestamp: expanded.from_timestamp, to: expanded.from_timestamp },
           color: segmentBorderColor
         });
         options.grid.markings.push({
-          xaxis: { from: expanded.to, to: expanded.to },
+          xaxis: { from_timestamp: expanded.to_timestamp, to: expanded.to_timestamp },
           color: segmentBorderColor
         });
       });
@@ -411,9 +411,9 @@ export class AnalyticController {
         const underlineColor = DETECTION_STATUS_COLORS.get(detectionSpan.status);;
 
         options.grid.markings.push({
-          xaxis: { from: detectionSpan.from, to: detectionSpan.to },
+          xaxis: { from_timestamp: detectionSpan.from_timestamp, to_timestamp: detectionSpan.to_timestamp },
           color: underlineColor,
-          yaxis: { from: minValue, to: minValue }
+          yaxis: { from_timestamp: minValue, to_timestamp: minValue }
         });
       });
     }
@@ -445,14 +445,14 @@ export class AnalyticController {
     });
   }
 
-  deleteLabelingAnalyticUnitSegmentsInRange(from: number, to: number): void {
-    const allRemovedSegs = this.labelingUnit.removeSegmentsInRange(from, to);
+  deleteLabelingAnalyticUnitSegmentsInRange(from_timestamp: number, to_timestamp: number): void {
+    const allRemovedSegs = this.labelingUnit.removeSegmentsInRange(from_timestamp, to_timestamp);
     allRemovedSegs.forEach(s => {
       if(!this._labelingDataAddedSegments.has(s.id)) {
         this._labelingDataRemovedSegments.addSegment(s);
       }
     });
-    const removed = this._labelingDataAddedSegments.removeInRange(from, to);
+    const removed = this._labelingDataAddedSegments.removeInRange(from_timestamp, to_timestamp);
     if(!_.isEmpty(removed)) {
       this.labelingUnit.changed = true;
     }
@@ -517,7 +517,7 @@ export class AnalyticController {
     this.fetchAnalyticUnitsStatuses();
   }
 
-  async getHSR(from: number, to: number): Promise<{
+  async getHSR(from_timestamp: number, to_timestamp: number): Promise<{
     hsr: HSRTimeSeries,
     lowerBound?: HSRTimeSeries,
     upperBound?: HSRTimeSeries
@@ -529,7 +529,7 @@ export class AnalyticController {
       return null;
     }
 
-    const response = await this._analyticService.getHSR(this.inspectedAnalyticUnit.id, from, to);
+    const response = await this._analyticService.getHSR(this.inspectedAnalyticUnit.id, from_timestamp, to_timestamp);
     if(response === null) {
       return null;
     }
@@ -545,8 +545,8 @@ export class AnalyticController {
     };
   }
 
-  async getHSRSeries(from: number, to: number) {
-    const response = await this.getHSR(from, to);
+  async getHSRSeries(from_timestamp: number, to_timestamp: number) {
+    const response = await this.getHSR(from_timestamp, to_timestamp);
 
     if(response === null) {
       return [];
@@ -634,8 +634,8 @@ export class AnalyticController {
   }
 
   // TODO: range type with "from" and "to" fields
-  private async _runDetectionsWaiter(analyticUnit: AnalyticUnit, from: number, to: number) {
-    const detectionsGenerator = this._analyticService.getDetectionsGenerator(analyticUnit.id, from, to, 1000);
+  private async _runDetectionsWaiter(analyticUnit: AnalyticUnit, from_timestamp: number, to_timestamp: number) {
+    const detectionsGenerator = this._analyticService.getDetectionsGenerator(analyticUnit.id, from_timestamp, to_timestamp, 1000);
 
     return this._runWaiter<DetectionSpan[]>(
       analyticUnit,

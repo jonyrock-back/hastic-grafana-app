@@ -35,10 +35,10 @@ export class EventManager {
     }
 
     // update time
-    this.event.time = moment(range.from);
+    this.event.time = moment(range.from_timestamp);
     this.event.isRegion = false;
     if (range.to) {
-      this.event.timeEnd = moment(range.to);
+      this.event.timeEnd = moment(range.to_timestamp);
       this.event.isRegion = true;
     }
 
@@ -160,7 +160,7 @@ function addRegionMarking(regions, flotOptions) {
 
     fillColor = addAlphaToRGB(fillColor, REGION_FILL_ALPHA);
     markings.push({
-      xaxis: { from: region.min, to: region.timeEnd },
+      xaxis: { from_timestamp: region.min, to_timestamp: region.timeEnd },
       color: fillColor,
     });
   });
