@@ -550,6 +550,7 @@ export class GraphRenderer {
 
   private _addTimeAxis() {
     var ticks = this.panelWidth / 100;
+    console.log(typeof this.ctrl, typeof this.ctrl.range, typeof this.ctrl.range.from_timestamp)
     var min = _.isUndefined(this.ctrl.range.from_timestamp) ? null : this.ctrl.range.from_timestamp.valueOf();
     var max = _.isUndefined(this.ctrl.range.to_timestamp) ? null : this.ctrl.range.to_timestamp.valueOf();
 

@@ -6,10 +6,10 @@ export class Segment {
       throw new Error('id is undefined');
     }
     if(isNaN(+from_timestamp)) {
-      throw new Error('from can`t be NaN');
+      throw new Error('from_timestamp can`t be NaN');
     }
     if(isNaN(+to_timestamp)) {
-      throw new Error('to can`t be NaN');
+      throw new Error('to_timestamp can`t be NaN');
     }
   }
   

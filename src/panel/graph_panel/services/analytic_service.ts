@@ -118,8 +118,8 @@ export class AnalyticService {
     removedSegments: SegmentsSet<AnalyticSegment>
   ): Promise<SegmentId[]> {
     const getJSONs = (segs: SegmentsSet<AnalyticSegment>) => segs.getSegments().map(segment => ({
-      from: segment.from,
-      to: segment.to,
+      from_timestamp: segment.from_timestamp,
+      to_timestamp: segment.to_timestamp,
       labeled: segment.labeled,
       deleted: segment.deleted
     }));

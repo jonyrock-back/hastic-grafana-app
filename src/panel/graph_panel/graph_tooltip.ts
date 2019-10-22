@@ -202,8 +202,8 @@ export class GraphTooltip {
       return '';
     }
     segments.forEach(s => {
-      var from = this.dashboard.formatDate(s.segment.from, 'HH:mm:ss.SSS');
-      var to = this.dashboard.formatDate(s.segment.to, 'HH:mm:ss.SSS');
+      var from_timestamp = this.dashboard.formatDate(s.segment.from_timestamp, 'HH:mm:ss.SSS');
+      var to_timestamp = this.dashboard.formatDate(s.segment.to_timestamp, 'HH:mm:ss.SSS');
 
       let icon;
       let subIcon;
@@ -229,7 +229,7 @@ export class GraphTooltip {
             ${s.analyticUnit.name}:
           </div>
           <div class="graph-tooltip-value">
-            ${from} — ${to}
+            ${from_timestamp} — ${to_timestamp}
           </div>
         </div>
       `;

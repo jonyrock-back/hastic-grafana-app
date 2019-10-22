@@ -791,10 +791,17 @@ class GraphCtrl extends MetricsPanelCtrl {
     if(this.range === undefined) {
       this.updateTimeRange();
     }
-
+    console.log('range1: ', this.range);
+    if(this.range.from !== undefined) {
+      this.range.from_timestamp = this.range.from;
+    }
+    if(this.range.to !== undefined) {
+      this.range.to_timestamp = this.range.to;
+    }
+    console.log('range2: ', this.range);
     return {
-      from_timestamp: +this.range.from_timestamp,
-      to_timestamp: +this.range.to_timestamp
+      from_timestamp: +this.range.from,
+      to_timestamp: +this.range.to
     };
   }
 

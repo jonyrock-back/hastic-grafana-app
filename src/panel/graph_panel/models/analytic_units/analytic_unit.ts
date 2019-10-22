@@ -28,8 +28,8 @@ export type AnalyticSegmentsSearcher = (point: number, rangeDist: number) => Ana
 export type AnalyticUnitId = string;
 
 export class AnalyticSegment extends Segment {
-  constructor(public labeled: boolean, id: SegmentId, from: number, to: number, public deleted = false) {
-    super(id, from, to);
+  constructor(public labeled: boolean, id: SegmentId, from_timestamp: number, to_timestamp: number, public deleted = false) {
+    super(id, from_timestamp, to_timestamp);
     if(!_.isBoolean(this.labeled)) {
       throw new Error('labeled value is not boolean');
     }
@@ -137,13 +137,13 @@ export class AnalyticUnit {
   }
 
   addSegment(segment: Segment, deleted: boolean): AnalyticSegment {
-    const addedSegment = new AnalyticSegment(!deleted, segment.id, segment.from, segment.to, deleted);
+    const addedSegment = new AnalyticSegment(!deleted, segment.id, segment.from_timestamp, segment.to_timestamp, deleted);
     this._segmentSet.addSegment(addedSegment);
     return addedSegment;
   }
 
-  removeSegmentsInRange(from: number, to: number): AnalyticSegment[] {
-    let deletedSegments = this._segmentSet.removeInRange(from, to);
+  removeSegmentsInRange(from_timestamp: number, to_timestamp: number): AnalyticSegment[] {
+    let deletedSegments = this._segmentSet.removeInRange(from_timestamp, to_timestamp);
     return deletedSegments;
   }
 

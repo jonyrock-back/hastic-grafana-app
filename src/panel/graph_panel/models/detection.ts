@@ -9,8 +9,8 @@ export enum DetectionStatus {
 export type DetectionSpan = {
   id: AnalyticUnitId,
   status: DetectionStatus,
-  from: number,
-  to: number
+  from_timestamp: number,
+  to_timestamp: number
 };
 
 export const DETECTION_STATUS_TEXT = new Map<DetectionStatus, string>([
