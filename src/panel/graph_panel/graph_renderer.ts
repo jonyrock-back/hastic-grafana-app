@@ -135,6 +135,7 @@ export class GraphRenderer {
   }
 
   private _onPlotSelected(event, selectionEvent) {
+
     if (this.panel.xaxis.mode !== 'time') {
       // Skip if panel in histogram or series mode
       this.plot.clearSelection();
@@ -144,11 +145,13 @@ export class GraphRenderer {
     if(this._isHasticEvent(selectionEvent)) {
       this.plot.clearSelection();
       const id = this._analyticController.getNewTempSegmentId();
+      console.log('xaxis', selectionEvent.xaxis)
       const segment = new Segment(
         id,
-        Math.round(selectionEvent.xaxis.from_timestamp),
-        Math.round(selectionEvent.xaxis.to_timestamp)
+        Math.round(selectionEvent.xaxis.from),
+        Math.round(selectionEvent.xaxis.to)
       );
+      console.log('segment:', segment)
       if(this._analyticController.labelingMode === LabelingMode.DELETING) {
         this._analyticController.deleteLabelingAnalyticUnitSegmentsInRange(
           segment.from_timestamp, segment.to_timestamp
@@ -163,8 +166,9 @@ export class GraphRenderer {
           segment.from_timestamp, segment.to_timestamp
         );
       }
-
+      console.log('controler: ', this._analyticController)
       this.scope.$apply();
+      console.log('this.scope: ', this.scope)
       this.renderPanel();
       return;
     }
@@ -176,9 +180,10 @@ export class GraphRenderer {
       // }, 100);
     } else {
       this.scope.$apply(() => {
+        console.log('xaxis 2: ', selectionEvent.xaxis)
         this.timeSrv.setTime({
-          from_timestamp: moment.utc(selectionEvent.xaxis.from_timestamp),
-          to_timestamp: moment.utc(selectionEvent.xaxis.to_timestamp),
+          from_timestamp: moment.utc(selectionEvent.xaxis.from),
+          to_timestamp: moment.utc(selectionEvent.xaxis.to),
         });
       });
     }
@@ -335,6 +340,7 @@ export class GraphRenderer {
     this.panel.dashes = this.panel.lines ? this.panel.dashes : false;
 
     // Populate element
+    console.log('this.panel: ', this.panel);
     this._buildFlotOptions(this.panel);
     this._prepareXAxis(this.panel);
     this._configureYAxisOptions(this.data);
@@ -506,6 +512,7 @@ export class GraphRenderer {
         mode: 'x',
       },
     };
+    console.log('this.flotOptions: ', this.flotOptions);
   }
 
   private _sortSeries(series, panel) {
@@ -550,7 +557,7 @@ export class GraphRenderer {
 
   private _addTimeAxis() {
     var ticks = this.panelWidth / 100;
-    console.log(typeof this.ctrl, typeof this.ctrl.range, typeof this.ctrl.range.from_timestamp)
+    console.log('axis range:',this.ctrl.range);
     var min = _.isUndefined(this.ctrl.range.from_timestamp) ? null : this.ctrl.range.from_timestamp.valueOf();
     var max = _.isUndefined(this.ctrl.range.to_timestamp) ? null : this.ctrl.range.to_timestamp.valueOf();
 
@@ -797,6 +804,7 @@ export class GraphRenderer {
   }
 
   private _timeFormat(ticks, min, max) {
+    console.log('timeformat min max: ', min, max)
     if (min && max && ticks) {
       var range = max - min;
       var secPerTick = range / ticks / 1000;

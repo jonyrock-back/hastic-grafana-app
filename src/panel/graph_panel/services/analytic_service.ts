@@ -137,11 +137,11 @@ export class AnalyticService {
     return data.addedIds as SegmentId[];
   }
 
-  async getDetectionSpans(id: AnalyticUnitId, from: number, to: number): Promise<DetectionSpan[]> {
+  async getDetectionSpans(id: AnalyticUnitId, from_timestamp: number, to_timestamp: number): Promise<DetectionSpan[]> {
     if(id === undefined) {
       throw new Error('id is undefined');
     }
-    let payload: any = { id, from, to };
+    let payload: any = { id, from_timestamp, to_timestamp };
     const data = await this.get('/detections/spans', payload);
     if(data === undefined || data.spans === undefined) {
       throw new Error('Server didn`t return spans array');
@@ -149,23 +149,23 @@ export class AnalyticService {
     return data.spans;
   }
 
-  async getSegments(id: AnalyticUnitId, from?: number, to?: number): Promise<AnalyticSegment[]> {
+  async getSegments(id: AnalyticUnitId, from_timestamp?: number, to_timestamp?: number): Promise<AnalyticSegment[]> {
     if(id === undefined) {
       throw new Error('id is undefined');
     }
     var payload: any = { id };
-    if(from !== undefined) {
-      payload['from'] = from;
+    if(from_timestamp !== undefined) {
+      payload['from_timestamp'] = from_timestamp;
     }
-    if(to !== undefined) {
-      payload['to'] = to;
+    if(to_timestamp !== undefined) {
+      payload['to_timestamp'] = to_timestamp;
     }
     var data = await this.get('/segments', payload);
     if(data.segments === undefined) {
       throw new Error('Server didn`t return segments array');
     }
-    var segments = data.segments as { id: SegmentId, from: number, to: number, labeled: boolean, deleted: boolean }[];
-    return segments.map(s => new AnalyticSegment(s.labeled, s.id, s.from, s.to, s.deleted));
+    var segments = data.segments as { id: SegmentId, from_timestamp: number, to_timestamp: number, labeled: boolean, deleted: boolean }[];
+    return segments.map(s => new AnalyticSegment(s.labeled, s.id, s.from_timestamp, s.to_timestamp, s.deleted));
   }
 
   getStatusGenerator(
@@ -190,16 +190,16 @@ export class AnalyticService {
 
   getDetectionsGenerator(
     id: AnalyticUnitId,
-    from: number,
-    to: number,
+    from_timestamp: number,
+    to_timestamp: number,
     duration: number
   ): AsyncIterableIterator<DetectionSpan[]> {
     return getGenerator<DetectionSpan[]>(
       id,
       duration,
       this.getDetectionSpans.bind(this),
-      from,
-      to
+      from_timestamp,
+      to_timestamp
     );
   }
 
@@ -220,12 +220,12 @@ export class AnalyticService {
     };
   }
 
-  async getHSR(analyticUnitId: AnalyticUnitId, from: number, to: number): Promise<{
+  async getHSR(analyticUnitId: AnalyticUnitId, from_timestamp: number, to_timestamp: number): Promise<{
     hsr: TableTimeSeries,
     lowerBound?: TableTimeSeries,
     upperBound?: TableTimeSeries
   } | null> {
-    const data = await this.get('/query', { analyticUnitId, from, to });
+    const data = await this.get('/query', { analyticUnitId, from_timestamp, to_timestamp });
     if(data === undefined) {
       return null;
     }
@@ -256,11 +256,11 @@ export class AnalyticService {
     return this.patch('/analyticUnits', updateObj);
   }
 
-  async runDetect(ids: AnalyticUnitId | AnalyticUnitId[], from?: number, to?: number) {
+  async runDetect(ids: AnalyticUnitId | AnalyticUnitId[], from_timestamp?: number, to_timestamp?: number) {
     if(!_.isArray(ids)) {
       ids = [ids];
     }
-    return this.post('/analyticUnits/detect', { ids, from, to });
+    return this.post('/analyticUnits/detect', { ids, from_timestamp, to_timestamp });
   }
 
   private async _analyticRequest(method: string, url: string, data?: any) {

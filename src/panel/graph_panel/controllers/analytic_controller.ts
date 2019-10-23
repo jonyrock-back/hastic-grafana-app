@@ -385,6 +385,7 @@ export class AnalyticController {
         }
 
         const expanded = s.expandDist(rangeDist, 0.01);
+        console.log('expanded: ', expanded);
         options.grid.markings.push({
           xaxis: { from_timestamp: expanded.from_timestamp, to_timestamp: expanded.to_timestamp },
           color: segmentFillColor
@@ -409,7 +410,7 @@ export class AnalyticController {
       const minValue = _.min(_.map(plot.getYAxes(), axis => axis.min));
       detectionSpans.forEach(detectionSpan => {
         const underlineColor = DETECTION_STATUS_COLORS.get(detectionSpan.status);;
-
+        console.log('detectionSpan and Min1value: ', detectionSpan, minValue);
         options.grid.markings.push({
           xaxis: { from_timestamp: detectionSpan.from_timestamp, to_timestamp: detectionSpan.to_timestamp },
           color: underlineColor,
