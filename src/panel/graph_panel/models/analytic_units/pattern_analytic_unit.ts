@@ -9,7 +9,7 @@ const DEFAULTS = {
 
 const LABELING_MODES = [
   { name: 'Label Positive', value: LabelingMode.LABELING },
-  { name: 'Label Negative', value: LabelingMode.DELETING },
+  { name: 'Label Negative', value: LabelingMode.DELETING, disabled: true },
   { name: 'Unlabel', value: LabelingMode.UNLABELING }
 ];
 
@@ -25,6 +25,12 @@ export class PatternAnalyticUnit extends AnalyticUnit {
     return {
       ...baseJSON
     };
+  }
+
+  isPositiveLabeled(labeled: boolean) {
+    if(labeled === true) {
+      LABELING_MODES[1].disabled = false;
+    }
   }
 
   get labelingModes() {

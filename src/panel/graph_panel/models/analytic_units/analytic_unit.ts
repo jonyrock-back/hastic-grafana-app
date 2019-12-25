@@ -137,6 +137,7 @@ export class AnalyticUnit {
   }
 
   addSegment(segment: Segment, deleted: boolean): AnalyticSegment {
+    this.isPositiveLabeled(!deleted);
     const addedSegment = new AnalyticSegment(!deleted, segment.id, segment.from, segment.to, deleted);
     this._segmentSet.addSegment(addedSegment);
     return addedSegment;
@@ -146,6 +147,8 @@ export class AnalyticUnit {
     let deletedSegments = this._segmentSet.removeInRange(from, to);
     return deletedSegments;
   }
+
+  isPositiveLabeled(labeled: boolean){}
 
   get segments(): SegmentsSet<AnalyticSegment> { return this._segmentSet; }
   set segments(value: SegmentsSet<AnalyticSegment>) {
